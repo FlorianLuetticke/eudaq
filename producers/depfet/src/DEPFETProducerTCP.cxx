@@ -45,6 +45,24 @@ void DEPFETProducerTCP::OnStopRun(){
   cmd_send("CMD STOP\n");
   eudaq::mSleep(2000);
   running = false;
+  if (data_host != "") {
+      printf("Trying to xancel event subscription \n");
+      int lenevent = BUFSIZE;
+      int  Nmod = NOREQUEST;
+      int  Kmod = 0;
+      unsigned int  itrg = 0;
+      int rc = tcp_event_get(&data_host[0], buffer, &lenevent, &Nmod, &Kmod, &itrg);
+      if(rc==42){
+          printf("Canceling event subscription was successful\n");
+      } else {
+          printf("Canceling event subscription had an error\n");
+      }
+
+  } else {
+      printf("No data host was set when OnStopRun was called. This should not happen.");
+  }
+
+  eudaq::mSleep(1000);
   SetConnectionState(eudaq::ConnectionState::STATE_CONF, "Stopped");
 }
 void DEPFETProducerTCP::OnTerminate(){
@@ -88,14 +106,14 @@ void DEPFETProducerTCP::Process() {
                 << ", EvType=" << evt_type << ", DevType=" << dev_type
                 << ", NData=" << lenevent << " (" << len2 << ") "
                 << ", TrigID=" << itrg << " (" << buffer[1] << ") last trigger "<<last_trigger << std::endl;
-      if(current_trigger_offset!=0){
+      if(current_trigger_offset!=0 && m_evt>0 && !(itrg == BORE_TRIGGERID || itrg == EORE_TRIGGERID || evt_type != 2)){
           std::cout << "WARNING! There is offset between internal and TLU Trigger of "<<current_trigger_offset << std::endl;
 
       }
     }
-    if( itrg != BORE_TRIGGERID && itrg != EORE_TRIGGERID  && (1+m_evt)%32768 != (itrg + current_trigger_offset )%32768 ){
-            std::cout << "Current internal trigger %%32768: " << (1+m_evt)%32768 << ", current TLU Trigger> "<< itrg << std::endl;
-            int newTriggerOffset=(1+m_evt -itrg)%32768;
+    if( m_evt>0 && itrg != BORE_TRIGGERID && itrg != EORE_TRIGGERID  && (m_evt)%32768 != (itrg + current_trigger_offset )%32768 ){
+            std::cout << "Current internal trigger %%32768: " << (m_evt)%32768 << ", current TLU Trigger> "<< itrg << std::endl;
+            int newTriggerOffset=(m_evt -itrg)%32768;
             std::cout << "WARNING! Trigger offset shifted. It was "<<current_trigger_offset << " now it is" << newTriggerOffset << std::endl;
             current_trigger_offset=newTriggerOffset;
     }
@@ -134,7 +152,12 @@ void DEPFETProducerTCP::Process() {
 //      return;
 //    }
   ++m_evt;
-  SendEvent(*ev);
+  try {
+    SendEvent(*ev);
+  } catch (eudaq::Exception e) {
+      printf("Exception occured while sending event to EUDAQ\nIt said >>%s<<\nSorry, but the producer has to be terminated now\n",e.what());
+      std::exit(-1);
+  }
   if (itrg%50000 == 0) std::cout << "##DEBUG## Sending took " << timer.mSeconds() << "ms" << std::endl;
 }
 

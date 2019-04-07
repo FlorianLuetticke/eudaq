@@ -17,6 +17,7 @@ using eudaq::RawDataEvent;
 namespace {
   static const int BUFSIZE = 1128000;
   static const int REQUEST = 0x1013;
+  static const int NOREQUEST = 0x1000;
   static const unsigned BORE_TRIGGERID = 0x55555555;
   static const unsigned EORE_TRIGGERID = 0xAAAAAAAA;
 }

@@ -223,19 +223,28 @@ int tcp_event_get(char *HOST2, unsigned int *DATA, int *lenDATA, int *Nr_Modules
   REQUEST=*Nr_Modules;
   //printf("REQUEST=%d REQUESTED=%d\n",REQUEST,REQUESTED);
    
-  if (REQUESTED==0 && REQUEST>0x1000) {
+  if ((REQUESTED==0 && REQUEST>0x1000)  ||  (REQUESTED==1 && REQUEST==0x1000) ) {
     if (REQUEST==0x1002) {
       HEADER[0]=0x2;  //-- request for 1 event --
       REQUESTED=0;
+      printf("Subscribing for a single event!\n");
     } else if (REQUEST==0x1003) {
       HEADER[0]=0x3;  //-- request continuous events --
       REQUESTED=1;
+      printf("Subscribing for a continuous events!\n");
     } else if (REQUEST==0x1013) {
       HEADER[0]=0x13;  //-- request continuous exclusive events --
       REQUESTED=1;
+      printf("Subscribing for a exclusive continuous events!\n");
+     } else if (REQUEST==0x1000) {
+      HEADER[0]=0x0;  //cancle requests
+      REQUESTED=0;
+      printf("Canceling event subscription!\n");
     } else {
       HEADER[0]=0x2;  //-- request for 1 event default --
       REQUESTED=0;
+      printf("WARNING! Unknown subscription token. Defaulting to single event!\n");
+
     } 
        
     HEADER[1]=0xAABBCCDD;
@@ -248,8 +257,13 @@ int tcp_event_get(char *HOST2, unsigned int *DATA, int *lenDATA, int *Nr_Modules
     //printf("ask DATA max lenDATA=%d\n",*lenDATA);
        
     if (send(sd, (char*) HEADER, sizeof(HEADER), 0) == -1) {
-      perror("send"); TCP_FLAG=-2;
+      perror("send Header in TCPclient"); TCP_FLAG=-2;
       return -1; 
+    }
+    if(REQUEST==0x1000){
+        *Nr_Modules=0;
+        *ModuleID=0;
+        return 0;
     }
   }
   //-----------------------------------------------------
