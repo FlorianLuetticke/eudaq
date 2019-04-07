@@ -59,7 +59,7 @@ void DEPFETProducerTCP::OnStopRun(){
       }
 
   } else {
-      printf("No data host was set when OnStopRun was called. This should not happen.");
+      printf("No data host was set when OnStopRun was called. This should not happen.\n");
   }
 
   eudaq::mSleep(1000);
